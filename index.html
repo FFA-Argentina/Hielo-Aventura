@@ -1,0 +1,828 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no">
+<meta name="theme-color" content="#0a1f3d">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<title>Hielo y Aventura</title>
+<link rel="manifest" href="manifest.json">
+<link rel="apple-touch-icon" href="apple-touch-icon.png">
+<meta name="apple-mobile-web-app-title" content="HyA Dashboard">
+<link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500&family=IBM+Plex+Sans:wght@400;500;600&display=swap" rel="stylesheet">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.js"></script>
+<style>
+:root{
+  --bg:#f5f7fa;--bg2:#fff;--bg3:#eaeff7;--bg4:#dde4ee;
+  --sb:#0a1f3d;--sb2:#11294f;--sb3:#1a3661;
+  --sbd:rgba(255,255,255,.08);--sbd2:rgba(255,255,255,.16);
+  --st:#bccde2;--st2:#7693b6;--st3:#3e5878;
+  --bdr:#cfd8e6;--tx:#091a30;--tx2:#34486a;--tx3:#7a8aa0;
+  --ac:#185da8;--acd:rgba(24,93,168,.08);--acl:#7ab8f5;
+  --red:#a53030;--amb:#9c6a10;--grn:#1a6b3f;--teal:#0f7a8a;--ice:#3a85b5;
+  --r:6px;
+  --f:'IBM Plex Sans','Helvetica Neue',Arial,sans-serif;
+  --m:'IBM Plex Mono','Courier New',monospace;
+  --top-h:52px;--met-h:46px;--nav-h:62px;
+}
+*{box-sizing:border-box;margin:0;padding:0;-webkit-tap-highlight-color:transparent}
+html,body{height:100%;background:var(--bg);color:var(--tx);font-family:var(--f);font-size:13px;overflow:hidden;line-height:1.5}
+::-webkit-scrollbar{width:4px;height:4px}
+::-webkit-scrollbar-thumb{background:var(--bg4);border-radius:2px}
+canvas{display:block;width:100%!important}
+
+#app{display:flex;flex-direction:column;height:100%}
+
+/* TOP BAR */
+#topbar{height:var(--top-h);background:var(--sb);border-bottom:1px solid rgba(0,0,0,.2);
+  display:flex;align-items:center;padding:0 14px;gap:10px;flex-shrink:0}
+.tb-title{font-family:var(--f);font-size:12px;font-weight:600;color:#fff;flex:1;line-height:1.3}
+.tb-sub{font-size:9px;color:var(--st3);font-family:var(--m);display:block;margin-top:1px}
+.tb-badge{font-size:9px;font-family:var(--m);padding:2px 7px;border-radius:3px;
+  background:rgba(24,93,168,.25);color:var(--acl);border:1px solid rgba(122,184,245,.2);white-space:nowrap}
+
+/* STICKY METRICS BAR */
+#metricbar{height:var(--met-h);background:var(--sb2);border-bottom:1px solid rgba(0,0,0,.18);
+  display:flex;align-items:center;flex-shrink:0;padding:0 4px}
+.met{flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;
+  padding:4px 2px;min-width:0}
+.met-v{font-family:var(--m);font-size:13px;font-weight:500;line-height:1.1;white-space:nowrap}
+.met-l{font-size:8px;color:var(--st3);font-family:var(--m);text-transform:uppercase;
+  letter-spacing:.08em;margin-top:2px}
+.met-div{width:1px;height:24px;background:var(--sbd);flex-shrink:0}
+
+/* SCREENS */
+#screens{flex:1;overflow:hidden;position:relative}
+.screen{position:absolute;inset:0;overflow-y:auto;overflow-x:hidden;
+  padding:12px 12px calc(8px + env(safe-area-inset-bottom));
+  display:none;-webkit-overflow-scrolling:touch;background:var(--bg)}
+.screen.active{display:block}
+
+/* BOTTOM NAV */
+#nav{height:var(--nav-h);background:var(--sb);border-top:1px solid rgba(0,0,0,.25);
+  display:flex;align-items:stretch;flex-shrink:0;padding-bottom:env(safe-area-inset-bottom)}
+.nav-btn{flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;
+  gap:3px;border:none;background:none;color:var(--st3);font-size:8px;letter-spacing:.03em;
+  font-family:var(--f);text-transform:uppercase;cursor:pointer;transition:color .15s;padding:0}
+.nav-btn.active{color:var(--acl)}
+.nav-btn svg{width:20px;height:20px;stroke-width:1.8;fill:none;stroke:currentColor}
+
+/* PANELS */
+.panel{background:var(--bg2);border:1px solid var(--bdr);border-radius:var(--r);
+  padding:12px;margin-bottom:10px}
+.ptitle{font-size:9px;color:var(--tx3);font-family:var(--m);letter-spacing:.12em;
+  text-transform:uppercase;margin-bottom:10px;border-bottom:1px solid var(--bdr);
+  padding-bottom:6px;font-weight:500;display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:4px}
+.cp{font-size:8px;padding:2px 6px;border-radius:3px;font-family:var(--m)}
+.cpb{background:var(--acd);color:var(--ac);border:1px solid rgba(24,93,168,.15)}
+.cpa{background:rgba(156,106,16,.08);color:var(--amb);border:1px solid rgba(156,106,16,.15)}
+.cpg{background:rgba(26,107,63,.08);color:var(--grn);border:1px solid rgba(26,107,63,.15)}
+
+/* KPI GRID */
+.kgrid{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:10px}
+.kpi{background:var(--bg2);border:1px solid var(--bdr);border-radius:var(--r);
+  padding:10px 11px;border-top:3px solid var(--bdr)}
+.kpi.kb{border-top-color:var(--ac)}.kpi.kg{border-top-color:var(--grn)}
+.kpi.ka{border-top-color:var(--amb)}.kpi.ki{border-top-color:var(--ice)}.kpi.kt{border-top-color:var(--teal)}
+.kv{font-family:var(--m);font-size:17px;font-weight:500;line-height:1.2}
+.kl{font-size:8px;color:var(--tx3);font-family:var(--m);text-transform:uppercase;letter-spacing:.1em;margin-top:3px}
+.ks{font-size:9px;color:var(--tx3);margin-top:2px;font-family:var(--m)}
+
+/* SEMAPHORE */
+.semaph{display:flex;align-items:center;gap:12px;background:var(--bg3);border-radius:var(--r);
+  padding:10px 14px;margin-bottom:10px;border:1px solid var(--bdr)}
+.sem-lights{display:flex;flex-direction:column;gap:5px}
+.sem-dot{width:12px;height:12px;border-radius:50%;opacity:.18;transition:opacity .3s,box-shadow .3s}
+.sem-dot.on-grn{opacity:1;background:var(--grn);box-shadow:0 0 8px rgba(26,107,63,.55)}
+.sem-dot.on-amb{opacity:1;background:#c8901a;box-shadow:0 0 8px rgba(200,144,26,.55)}
+.sem-dot.on-red{opacity:1;background:var(--red);box-shadow:0 0 8px rgba(165,48,48,.55)}
+.sem-dot.off-grn{background:var(--grn)}.sem-dot.off-amb{background:#c8901a}.sem-dot.off-red{background:var(--red)}
+.sem-text{flex:1;min-width:0}
+.sem-head{font-size:12px;font-weight:600;letter-spacing:-.01em;margin-bottom:2px}
+.sem-body{font-size:9px;color:var(--tx3);font-family:var(--m);line-height:1.4}
+
+/* PARAMS — dark panels */
+.sb-panel{background:var(--sb);border:1px solid rgba(0,0,0,.2);border-radius:var(--r);
+  padding:12px;margin-bottom:10px}
+.section-lbl{display:block;font-size:9px;font-family:var(--m);color:var(--acl);
+  text-transform:uppercase;letter-spacing:.14em;margin-bottom:8px;margin-top:14px;
+  padding-bottom:4px;border-bottom:1px solid var(--sbd);font-weight:500}
+.section-lbl:first-child{margin-top:0}
+.ctrl{margin-bottom:11px}.ctrl:last-child{margin-bottom:0}
+.ctrl-label{display:flex;justify-content:space-between;align-items:baseline;
+  font-size:9px;color:var(--st3);font-family:var(--m);letter-spacing:.08em;
+  text-transform:uppercase;margin-bottom:4px}
+.ctrl-label span{font-family:var(--m);font-size:11px;color:var(--acl);font-weight:500}
+input[type=range]{width:100%;-webkit-appearance:none;appearance:none;height:3px;
+  background:var(--sb3);border-radius:2px;outline:none;cursor:pointer;display:block;margin:0}
+input[type=range]::-webkit-slider-thumb{-webkit-appearance:none;width:16px;height:16px;
+  border-radius:50%;background:var(--acl);cursor:pointer;border:2px solid var(--sb);transition:transform .1s}
+input[type=range]::-webkit-slider-thumb:hover{transform:scale(1.2)}
+.ctrl-range{display:flex;justify-content:space-between;margin-top:2px}
+.ctrl-range span{font-size:8px;color:var(--st3);font-family:var(--m)}
+.sub-info{margin-top:4px;padding:4px 7px;background:var(--sb3);border-radius:4px;
+  display:flex;justify-content:space-between;align-items:center}
+.sub-lbl{font-size:8px;color:var(--st3);font-family:var(--m)}
+.sub-val{font-size:10px;color:var(--acl);font-family:var(--m);font-weight:500}
+.fp-grid{display:grid;grid-template-columns:1fr 1fr;gap:4px;margin-top:6px}
+.fp-item{background:var(--sb3);border-radius:4px;padding:5px 8px}
+.fp-lbl{font-size:8px;color:var(--st3);font-family:var(--m);text-transform:uppercase;display:block;margin-bottom:1px}
+.fp-val{font-size:10px;color:var(--st);font-family:var(--m);font-weight:500}
+.rst{width:100%;background:transparent;border:1px solid var(--sbd2);color:var(--st2);
+  padding:8px;border-radius:var(--r);font-family:var(--f);font-size:11px;cursor:pointer;
+  transition:all .15s;margin-top:4px}
+.rst:hover{background:rgba(255,255,255,.06);color:var(--st)}
+.rst:active{transform:scale(.98)}
+
+/* TIRM GAUGE */
+.bw{display:flex;align-items:center;gap:8px;width:100%;margin:10px 0 4px}
+.bb{flex:1;height:5px;border-radius:3px;background:linear-gradient(to right,var(--red) 0%,var(--amb) 30%,var(--grn) 60%,var(--ac) 100%);position:relative}
+.bn{position:absolute;top:-7px;width:2px;height:19px;background:var(--tx);border-radius:1px;transform:translateX(-50%);transition:left .35s ease}
+.is{border-top:1px solid var(--bdr);padding-top:8px;margin-top:8px;display:grid;grid-template-columns:1fr auto;gap:3px 8px}
+.il{font-size:9px;color:var(--tx3)}.iv{font-size:9px;color:var(--tx);font-family:var(--m);text-align:right;font-weight:500}
+
+/* SENS BARS */
+.sr{display:flex;align-items:center;gap:8px;margin-bottom:6px}
+.slbl{font-size:9px;color:var(--tx3);width:70px;flex-shrink:0;font-family:var(--m)}
+.sbw{flex:1;height:6px;background:var(--bg3);border-radius:3px;overflow:hidden;border:1px solid var(--bdr)}
+.sbar{height:100%;border-radius:3px;transition:width .3s}
+.sv{font-size:9px;font-family:var(--m);width:56px;text-align:right;flex-shrink:0;font-weight:500;color:var(--tx)}
+
+/* TABLE */
+.ptable-wrap{overflow-x:auto;-webkit-overflow-scrolling:touch}
+.dt{border-collapse:collapse;font-size:10px;min-width:600px;width:100%}
+.dt th{background:var(--bg3);padding:5px 7px;text-align:right;font-family:var(--m);font-size:8px;
+  color:var(--tx3);font-weight:500;text-transform:uppercase;letter-spacing:.06em;
+  border-bottom:1px solid var(--bdr);white-space:nowrap;position:sticky;top:0;z-index:2}
+.dt th:first-child{text-align:left}
+.dt td{padding:4px 7px;text-align:right;font-family:var(--m);font-size:10px;color:var(--tx2);
+  border-bottom:1px solid var(--bdr);white-space:nowrap}
+.dt td:first-child{text-align:left;font-family:var(--f);font-size:10px}
+.dt tr.shdr td{background:var(--bg)!important;color:var(--tx3);font-size:8px;
+  font-family:var(--m);text-transform:uppercase;letter-spacing:.08em;padding:4px 7px;font-weight:500}
+.dt tr.rtot td{border-top:1px solid var(--bdr);color:var(--tx);font-weight:600;background:var(--bg3)}
+.dt tr.rda td{color:var(--tx3)}
+.vp{color:var(--grn)!important}.vn{color:var(--red)!important}
+
+/* HEATMAP TABLE */
+.bm-table{border-collapse:collapse;font-size:9px;font-family:var(--m);width:100%}
+.bm-table th{padding:4px 5px;background:var(--bg3);font-size:8px;color:var(--tx3);
+  font-weight:500;border:1px solid var(--bdr);white-space:nowrap;text-align:center}
+.bm-table th:first-child{text-align:right}
+.bm-table td{padding:4px 5px;text-align:center;border:1px solid var(--bdr);white-space:nowrap}
+.bm-table td:first-child{text-align:right;background:var(--bg3);color:var(--tx3);font-weight:500}
+.bm-g{background:rgba(26,107,63,.20);color:var(--grn);font-weight:600}
+.bm-g2{background:rgba(26,107,63,.10);color:var(--grn)}
+.bm-a{background:rgba(156,106,16,.18);color:var(--amb);font-weight:600}
+.bm-r{background:rgba(165,48,48,.10);color:var(--red)}
+.bm-r2{background:rgba(165,48,48,.22);color:var(--red);font-weight:600}
+.bm-cur{outline:2px solid var(--ac);outline-offset:-2px}
+
+/* PROJ INFO STRIP */
+.proj-info{background:linear-gradient(135deg,var(--sb) 0%,var(--sb2) 100%);color:#fff;
+  padding:12px 14px;border-radius:var(--r);margin-bottom:10px}
+.proj-grid{display:grid;grid-template-columns:1fr 1fr;gap:8px}
+.proj-block .pl{font-size:8px;color:var(--st3);font-family:var(--m);text-transform:uppercase;letter-spacing:.1em;margin-bottom:2px}
+.proj-block .pv2{font-size:12px;font-weight:600;color:#fff}
+.proj-block .pn2{font-size:9px;color:var(--st);margin-top:1px}
+
+/* CHART WRAP */
+.cw{position:relative}
+.cw.h180{height:180px}.cw.h220{height:220px}.cw.h240{height:240px}.cw.h260{height:260px}
+
+/* TIRM DETAIL CARD */
+.tirm-card{background:var(--bg2);border:1px solid var(--bdr);border-radius:var(--r);padding:12px;margin-bottom:10px}
+.big-tir{font-size:36px;font-weight:300;letter-spacing:-.04em;line-height:1;font-family:var(--m);text-align:center;padding:10px 0 4px}
+
+/* NOTA */
+.nota{font-size:9px;color:var(--tx3);font-family:var(--m);line-height:1.5;margin-top:6px}
+</style>
+</head>
+<body>
+<div id="app">
+
+<!-- TOP BAR -->
+<div id="topbar">
+  <div style="flex:1;min-width:0">
+    <div class="tb-title">Hielo y Aventura S.A.
+      <span class="tb-sub">Glaciar Perito Moreno · Licitación N° 15 · 12 años · 48 trim.</span>
+    </div>
+  </div>
+  <div class="tb-badge" id="b-van">VAN —</div>
+</div>
+
+<!-- STICKY METRICS BAR -->
+<div id="metricbar">
+  <div class="met"><div class="met-v" id="m-van">—</div><div class="met-l">VAN</div></div>
+  <div class="met-div"></div>
+  <div class="met"><div class="met-v" id="m-tirm">—</div><div class="met-l">TIRM</div></div>
+  <div class="met-div"></div>
+  <div class="met"><div class="met-v" id="m-pb">—</div><div class="met-l">Payback</div></div>
+  <div class="met-div"></div>
+  <div class="met"><div class="met-v" id="m-roi">—</div><div class="met-l">ROI</div></div>
+</div>
+
+<!-- SCREENS -->
+<div id="screens">
+
+  <!-- TAB 1: PARÁMETROS -->
+  <div class="screen active" id="s-params">
+    <div class="sb-panel">
+      <span class="section-lbl">Tasa de descuento</span>
+      <div class="ctrl">
+        <div class="ctrl-label">WACC anual <span id="v-wacc">6.0%</span></div>
+        <input type="range" id="s-wacc" min="3" max="20" step="0.25" value="6">
+        <div class="ctrl-range"><span>3%</span><span>20%</span></div>
+        <div class="sub-info"><span class="sub-lbl">Tasa trimestral equiv.</span><span class="sub-val" id="v-wacc-trim">1.467%</span></div>
+        <div class="sub-info" style="margin-top:3px"><span class="sub-lbl">Tasa mensual equiv.</span><span class="sub-val" id="v-wacc-mes">0.487%</span></div>
+      </div>
+    </div>
+
+    <div class="sb-panel">
+      <span class="section-lbl">Tasas TIRM</span>
+      <div class="ctrl">
+        <div class="ctrl-label">Tasa financiamiento (anual) <span id="v-tfin">12.0%</span></div>
+        <input type="range" id="s-tfin" min="2" max="30" step="0.25" value="12">
+        <div class="ctrl-range"><span>2%</span><span>30%</span></div>
+        <div class="sub-info"><span class="sub-lbl">Trim.</span><span class="sub-val" id="v-tfin-trim">2.874%</span></div>
+      </div>
+      <div class="ctrl">
+        <div class="ctrl-label">Tasa reinversión (anual) <span id="v-trein">15.0%</span></div>
+        <input type="range" id="s-trein" min="2" max="35" step="0.25" value="15">
+        <div class="ctrl-range"><span>2%</span><span>35%</span></div>
+        <div class="sub-info"><span class="sub-lbl">Trim.</span><span class="sub-val" id="v-trein-trim">3.556%</span></div>
+      </div>
+    </div>
+
+    <div class="sb-panel">
+      <span class="section-lbl">Estructura de costos</span>
+      <div class="ctrl">
+        <div class="ctrl-label">Gs. Operativos <span id="v-oper">11.0%</span></div>
+        <input type="range" id="s-oper" min="5" max="20" step="0.5" value="11">
+        <div class="ctrl-range"><span>5%</span><span>20%</span></div>
+      </div>
+      <div class="ctrl">
+        <div class="ctrl-label">Gs. Administrativos <span id="v-admin">2.0%</span></div>
+        <input type="range" id="s-admin" min="0.5" max="6" step="0.25" value="2">
+        <div class="ctrl-range"><span>0.5%</span><span>6%</span></div>
+      </div>
+      <div class="ctrl">
+        <div class="ctrl-label">Gs. Comercialización <span id="v-com">3.0%</span></div>
+        <input type="range" id="s-com" min="1" max="8" step="0.25" value="3">
+        <div class="ctrl-range"><span>1%</span><span>8%</span></div>
+      </div>
+      <div class="ctrl">
+        <div class="ctrl-label">Personal (% s/baseline) <span id="v-pers">100%</span></div>
+        <input type="range" id="s-pers" min="60" max="140" step="2" value="100">
+        <div class="ctrl-range"><span>60%</span><span>140%</span></div>
+      </div>
+    </div>
+
+    <div class="sb-panel">
+      <span class="section-lbl">Parámetros fijos</span>
+      <div class="fp-grid">
+        <div class="fp-item"><span class="fp-lbl">Concesionario</span><span class="fp-val">HyA S.A.</span></div>
+        <div class="fp-item"><span class="fp-lbl">Plazo</span><span class="fp-val">12 años</span></div>
+        <div class="fp-item"><span class="fp-lbl">CAPEX</span><span class="fp-val">$33.4M</span></div>
+        <div class="fp-item"><span class="fp-lbl">Trimestres</span><span class="fp-val">48</span></div>
+        <div class="fp-item"><span class="fp-lbl">Imp. Ganancias</span><span class="fp-val">35%</span></div>
+        <div class="fp-item"><span class="fp-lbl">Inicio</span><span class="fp-val">07/2014</span></div>
+      </div>
+      <button class="rst" onclick="resetDefaults()">↺ Restablecer valores base</button>
+    </div>
+  </div>
+
+  <!-- TAB 2: RESUMEN -->
+  <div class="screen" id="s-resumen">
+    <div class="proj-info">
+      <div class="proj-grid">
+        <div class="proj-block"><div class="pl">Marco jurídico</div><div class="pv2">Licitación N° 15</div><div class="pn2">Expediente 1968/2013 · APN</div></div>
+        <div class="proj-block"><div class="pl">Productos</div><div class="pv2">Minitrekking · Big Ice</div><div class="pn2">Big+MTK · Safari Náutico</div></div>
+        <div class="proj-block"><div class="pl">Modelo</div><div class="pv2">DCF + TIRM</div><div class="pn2">3 escenarios · 48 trim.</div></div>
+        <div class="proj-block"><div class="pl">Operador</div><div class="pv2">Único operador</div><div class="pn2">Sobre el hielo del glaciar</div></div>
+      </div>
+    </div>
+
+    <div class="kgrid">
+      <div class="kpi kb"><div class="kl">VAN @ WACC</div><div class="kv" id="k-van">—</div><div class="ks">Valor Actual Neto</div></div>
+      <div class="kpi kg"><div class="kl">TIRM anual</div><div class="kv" id="k-tir">—</div><div class="ks">TIR Modificada</div></div>
+      <div class="kpi kt"><div class="kl">Payback desct.</div><div class="kv" id="k-pb">—</div><div class="ks">Recupero @ WACC</div></div>
+      <div class="kpi ki"><div class="kl">ROI total</div><div class="kv" id="k-roi">—</div><div class="ks">Retorno inversión</div></div>
+    </div>
+
+    <div class="semaph">
+      <div class="sem-lights">
+        <div class="sem-dot off-grn" id="sem-g"></div>
+        <div class="sem-dot off-amb" id="sem-a"></div>
+        <div class="sem-dot off-red" id="sem-r"></div>
+      </div>
+      <div class="sem-text">
+        <div class="sem-head" id="sem-head">—</div>
+        <div class="sem-body" id="sem-body">—</div>
+      </div>
+    </div>
+
+    <div class="tirm-card">
+      <div class="ptitle" style="border:none;padding-bottom:0;margin-bottom:0">TIRM vs WACC</div>
+      <div class="big-tir" id="big-tir">—</div>
+      <div style="text-align:center;font-size:9px;color:var(--tx3);font-family:var(--m);text-transform:uppercase;letter-spacing:.1em;margin-bottom:6px">TIR Modificada Anual</div>
+      <div class="bw">
+        <span style="font-size:8px;color:var(--tx3);font-family:var(--m)">−10%</span>
+        <div class="bb"><div class="bn" id="bar-tir" style="left:40%"></div></div>
+        <span style="font-size:8px;color:var(--tx3);font-family:var(--m)">40%</span>
+      </div>
+      <div class="is">
+        <span class="il">WACC actual</span><span class="iv" id="ir-wacc">6.0%</span>
+        <span class="il">Spread TIRM−WACC</span><span class="iv" id="ir-spread">—</span>
+        <span class="il">Tasa financiamiento (trim.)</span><span class="iv" id="ir-tfin">2.874%</span>
+        <span class="il">Tasa reinversión (trim.)</span><span class="iv" id="ir-trein">3.556%</span>
+      </div>
+    </div>
+
+    <div class="panel">
+      <div class="ptitle">Flujo neto trimestral + Acumulado</div>
+      <div class="cw h260"><canvas id="ch-flujos"></canvas></div>
+    </div>
+    <div class="panel">
+      <div class="ptitle">Composición de ingresos por producto <span class="cp cpb">Donut</span></div>
+      <div class="cw h220"><canvas id="ch-prod"></canvas></div>
+    </div>
+    <div class="panel">
+      <div class="ptitle">Estacionalidad · ingresos promedio por trimestre <span class="cp cpg">Barras</span></div>
+      <div class="cw h180"><canvas id="ch-estac"></canvas></div>
+    </div>
+  </div>
+
+  <!-- TAB 3: PROYECCIONES -->
+  <div class="screen" id="s-proy">
+    <div class="panel">
+      <div class="ptitle">Cuenta de resultados anualizada <span class="cp cpb">Apilado</span></div>
+      <div class="cw h240"><canvas id="ch-pyl"></canvas></div>
+    </div>
+    <div class="panel">
+      <div class="ptitle">Ingresos vs Egresos <span class="cp cpg">Líneas</span></div>
+      <div class="cw h220"><canvas id="ch-ie"></canvas></div>
+    </div>
+    <div class="panel">
+      <div class="ptitle">Flujo descontado (PV) trimestral</div>
+      <div class="cw h220"><canvas id="ch-pv"></canvas></div>
+    </div>
+    <div class="panel">
+      <div class="ptitle">VAN acumulado · trayectoria</div>
+      <div class="cw h220"><canvas id="ch-vanacum"></canvas></div>
+    </div>
+    <div class="panel">
+      <div class="ptitle">Comparativa metodológica <span class="cp cpa">3 escenarios</span></div>
+      <div class="cw h240"><canvas id="ch-comp"></canvas></div>
+    </div>
+  </div>
+
+  <!-- TAB 4: SENSIBILIDAD -->
+  <div class="screen" id="s-sens">
+    <div class="panel">
+      <div class="ptitle">Matriz VAN · Factor corrector × WACC</div>
+      <div style="overflow-x:auto"><table class="bm-table" id="mat-fc-wacc"></table></div>
+      <div class="nota">Filas: factor corrector · Columnas: WACC anual · Celdas: VAN en M$</div>
+    </div>
+    <div class="panel">
+      <div class="ptitle">Matriz TIRM · Tfin × Trein</div>
+      <div style="overflow-x:auto"><table class="bm-table" id="mat-tirm"></table></div>
+      <div class="nota">Filas: tasa financiamiento · Columnas: tasa reinversión · TIRM anual</div>
+    </div>
+    <div class="panel">
+      <div class="ptitle">Sensibilidad VAN al factor corrector</div>
+      <div id="sens-fc"></div>
+    </div>
+    <div class="panel">
+      <div class="ptitle">Sensibilidad TIRM a tasas</div>
+      <div id="sens-tirm"></div>
+    </div>
+    <div class="panel">
+      <div class="ptitle">Análisis de escenarios</div>
+      <div style="overflow-x:auto">
+        <table class="dt" style="min-width:360px">
+          <thead><tr>
+            <th style="text-align:left">Indicador</th>
+            <th style="color:var(--red)">Pesimista</th>
+            <th style="color:var(--ac)">Base</th>
+            <th style="color:var(--grn)">Optimista</th>
+          </tr></thead>
+          <tbody id="esc-tbl"></tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+
+  <!-- TAB 5: TABLA -->
+  <div class="screen" id="s-tabla">
+    <div class="panel">
+      <div class="ptitle">Proyección detallada por trimestre</div>
+      <div class="ptable-wrap" style="max-height:70vh;overflow-y:auto">
+        <table class="dt" id="tbl-detail"></table>
+      </div>
+      <div class="nota">48 períodos · valores en pesos argentinos corrientes · V=verano O=otoño I=invierno P=primavera</div>
+    </div>
+  </div>
+
+</div><!-- /screens -->
+
+<!-- BOTTOM NAV -->
+<nav id="nav">
+  <button class="nav-btn active" data-tab="s-params" onclick="goTab(this)">
+    <svg viewBox="0 0 24 24"><line x1="4" y1="6" x2="20" y2="6"/><line x1="4" y1="12" x2="20" y2="12"/><line x1="4" y1="18" x2="20" y2="18"/><circle cx="8" cy="6" r="2" fill="currentColor"/><circle cx="16" cy="12" r="2" fill="currentColor"/><circle cx="10" cy="18" r="2" fill="currentColor"/></svg>
+    Params
+  </button>
+  <button class="nav-btn" data-tab="s-resumen" onclick="goTab(this)">
+    <svg viewBox="0 0 24 24"><rect x="3" y="13" width="4" height="8" rx="1"/><rect x="10" y="9" width="4" height="12" rx="1"/><rect x="17" y="5" width="4" height="16" rx="1"/></svg>
+    Resumen
+  </button>
+  <button class="nav-btn" data-tab="s-proy" onclick="goTab(this)">
+    <svg viewBox="0 0 24 24"><polyline points="3,17 9,11 13,15 21,7"/><polyline points="14,7 21,7 21,14"/></svg>
+    Flujos
+  </button>
+  <button class="nav-btn" data-tab="s-sens" onclick="goTab(this)">
+    <svg viewBox="0 0 24 24"><rect x="3" y="3" width="18" height="18" rx="2"/><line x1="3" y1="9" x2="21" y2="9"/><line x1="3" y1="15" x2="21" y2="15"/><line x1="9" y1="3" x2="9" y2="21"/></svg>
+    Sensib.
+  </button>
+  <button class="nav-btn" data-tab="s-tabla" onclick="goTab(this)">
+    <svg viewBox="0 0 24 24"><path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8z"/><polyline points="14,2 14,8 20,8"/><line x1="8" y1="13" x2="16" y2="13"/><line x1="8" y1="17" x2="16" y2="17"/></svg>
+    Tabla
+  </button>
+</nav>
+</div>
+
+<script>
+// ── NAV ──────────────────────────────────────────────
+function goTab(btn){
+  document.querySelectorAll('.nav-btn').forEach(b=>b.classList.remove('active'));
+  document.querySelectorAll('.screen').forEach(s=>s.classList.remove('active'));
+  btn.classList.add('active');
+  document.getElementById(btn.dataset.tab).classList.add('active');
+  setTimeout(()=>updateAll(true),60);
+}
+
+// ── DATOS ─────────────────────────────────────────────
+const FLUJOS=[{"t":0,"fecha":"","qlabel":"","ingr_c":0,"gs_pers":0,"amort":0,"inversiones":4009200.3},{"t":1,"fecha":"2014-07","qlabel":"I","ingr_c":2927278.3,"gs_pers":5051682.63,"amort":384333.33,"inversiones":0},{"t":2,"fecha":"2014-10","qlabel":"P","ingr_c":12433863.73,"gs_pers":5051682.63,"amort":384333.33,"inversiones":0},{"t":3,"fecha":"2015-01","qlabel":"V","ingr_c":23471134.07,"gs_pers":9806207.45,"amort":384333.33,"inversiones":3021158.25},{"t":4,"fecha":"2015-04","qlabel":"O","ingr_c":18320273.61,"gs_pers":9806207.45,"amort":384333.33,"inversiones":3021158.25},{"t":5,"fecha":"2015-07","qlabel":"I","ingr_c":2929686.73,"gs_pers":5051682.63,"amort":97520.83,"inversiones":0},{"t":6,"fecha":"2015-10","qlabel":"P","ingr_c":11578532.38,"gs_pers":5051682.63,"amort":97520.83,"inversiones":0},{"t":7,"fecha":"2016-01","qlabel":"V","ingr_c":22420454.24,"gs_pers":9806207.45,"amort":97520.83,"inversiones":0},{"t":8,"fecha":"2016-04","qlabel":"O","ingr_c":16597282.35,"gs_pers":9806207.45,"amort":97520.83,"inversiones":732000},{"t":9,"fecha":"2016-07","qlabel":"I","ingr_c":2465883.95,"gs_pers":5051682.63,"amort":99173.85,"inversiones":0},{"t":10,"fecha":"2016-10","qlabel":"P","ingr_c":11813900.25,"gs_pers":5051682.63,"amort":99173.85,"inversiones":0},{"t":11,"fecha":"2017-01","qlabel":"V","ingr_c":25348871.57,"gs_pers":9806207.45,"amort":99173.85,"inversiones":0},{"t":12,"fecha":"2017-04","qlabel":"O","ingr_c":19146327.51,"gs_pers":9806207.45,"amort":99173.85,"inversiones":719900},{"t":13,"fecha":"2017-07","qlabel":"I","ingr_c":2366834.4,"gs_pers":5203233.11,"amort":107261.31,"inversiones":0},{"t":14,"fecha":"2017-10","qlabel":"P","ingr_c":12412299.63,"gs_pers":5203233.11,"amort":107261.31,"inversiones":0},{"t":15,"fecha":"2018-01","qlabel":"V","ingr_c":25184626.48,"gs_pers":10100393.67,"amort":107261.31,"inversiones":0},{"t":16,"fecha":"2018-04","qlabel":"O","ingr_c":19931496.29,"gs_pers":10100393.67,"amort":107261.31,"inversiones":635728.53},{"t":17,"fecha":"2018-07","qlabel":"I","ingr_c":2600927.44,"gs_pers":5203233.11,"amort":112261.31,"inversiones":643395.93},{"t":18,"fecha":"2018-10","qlabel":"P","ingr_c":7462840.99,"gs_pers":5203233.11,"amort":112261.31,"inversiones":0},{"t":19,"fecha":"2019-01","qlabel":"V","ingr_c":22725988.52,"gs_pers":10100393.67,"amort":112261.31,"inversiones":500000},{"t":20,"fecha":"2019-04","qlabel":"O","ingr_c":17954877.93,"gs_pers":11114824.51,"amort":112261.31,"inversiones":2823838.61},{"t":21,"fecha":"2019-07","qlabel":"I","ingr_c":3414984.64,"gs_pers":5816309.71,"amort":181387.9,"inversiones":0},{"t":22,"fecha":"2019-10","qlabel":"P","ingr_c":9101570.1,"gs_pers":5771064.2,"amort":181387.9,"inversiones":0},{"t":23,"fecha":"2020-01","qlabel":"V","ingr_c":36343444.06,"gs_pers":11671078.08,"amort":181387.9,"inversiones":500000},{"t":24,"fecha":"2020-04","qlabel":"O","ingr_c":16006679.53,"gs_pers":12676725.97,"amort":181387.9,"inversiones":229900},{"t":25,"fecha":"2020-07","qlabel":"I","ingr_c":0,"gs_pers":5359330.1,"amort":184600.48,"inversiones":0},{"t":26,"fecha":"2021-01","qlabel":"V","ingr_c":3290378.17,"gs_pers":5359330.1,"amort":184600.48,"inversiones":0},{"t":27,"fecha":"2020-10","qlabel":"P","ingr_c":0,"gs_pers":10403405.48,"amort":184600.48,"inversiones":500000},{"t":28,"fecha":"2021-04","qlabel":"O","ingr_c":12580889.19,"gs_pers":10403405.48,"amort":184600.48,"inversiones":229900},{"t":29,"fecha":"2021-07","qlabel":"I","ingr_c":1689982.79,"gs_pers":5359330.1,"amort":202600.48,"inversiones":0},{"t":30,"fecha":"2021-10","qlabel":"P","ingr_c":8564807.71,"gs_pers":5359330.1,"amort":202600.48,"inversiones":0},{"t":31,"fecha":"2022-01","qlabel":"V","ingr_c":26078566.32,"gs_pers":12613752.21,"amort":202600.48,"inversiones":3303534.45},{"t":32,"fecha":"2022-04","qlabel":"O","ingr_c":25312307.13,"gs_pers":13819944.15,"amort":202600.48,"inversiones":229900},{"t":33,"fecha":"2022-07","qlabel":"I","ingr_c":6908003.36,"gs_pers":6995090.85,"amort":290688.84,"inversiones":273974.25},{"t":34,"fecha":"2022-10","qlabel":"P","ingr_c":18978379.4,"gs_pers":7538791.01,"amort":290688.84,"inversiones":2956321.34},{"t":35,"fecha":"2023-01","qlabel":"V","ingr_c":34955441.65,"gs_pers":17981306.34,"amort":290688.84,"inversiones":500000},{"t":36,"fecha":"2023-04","qlabel":"O","ingr_c":34920477.74,"gs_pers":17860687.15,"amort":290688.84,"inversiones":4222798.03},{"t":37,"fecha":"2023-07","qlabel":"I","ingr_c":8744760.05,"gs_pers":8356966.54,"amort":1371656.56,"inversiones":0},{"t":38,"fecha":"2023-10","qlabel":"P","ingr_c":25932317.33,"gs_pers":8724973.88,"amort":1371656.56,"inversiones":229900},{"t":39,"fecha":"2024-01","qlabel":"V","ingr_c":44575690.56,"gs_pers":18851528.6,"amort":1371656.56,"inversiones":368027.72},{"t":40,"fecha":"2024-04","qlabel":"O","ingr_c":37771645.8,"gs_pers":19224241.91,"amort":1371656.56,"inversiones":525674.09},{"t":41,"fecha":"2024-07","qlabel":"I","ingr_c":9409657.99,"gs_pers":8575370.9,"amort":1501722.65,"inversiones":595289.8},{"t":42,"fecha":"2024-10","qlabel":"P","ingr_c":24129415.37,"gs_pers":9071380.78,"amort":1501722.65,"inversiones":1299006.11},{"t":43,"fecha":"2025-01","qlabel":"V","ingr_c":55682935.34,"gs_pers":19660627.08,"amort":1501722.65,"inversiones":934876.64},{"t":44,"fecha":"2025-04","qlabel":"O","ingr_c":37237619.97,"gs_pers":18686137.07,"amort":1501722.65,"inversiones":367328.57},{"t":45,"fecha":"2025-07","qlabel":"I","ingr_c":6482968.61,"gs_pers":9690193.11,"amort":1529543.42,"inversiones":0},{"t":46,"fecha":"2025-10","qlabel":"P","ingr_c":17877476.95,"gs_pers":8466168.72,"amort":1529543.42,"inversiones":0},{"t":47,"fecha":"2026-01","qlabel":"V","ingr_c":43346503.03,"gs_pers":17272932.44,"amort":1529543.42,"inversiones":0}];
+
+const ESCENARIOS=[{"t":0,"original":-4009200,"modificado":-4009200,"proyecciones":-4009200},{"t":1,"original":-3092769,"modificado":-3410061,"proyecciones":-2977102},{"t":2,"original":2417705,"modificado":2156076,"proyecciones":4297465},{"t":3,"original":4217719,"modificado":3477336,"proyecciones":3170229},{"t":4,"original":-2049971,"modificado":1204873,"proyecciones":357860},{"t":5,"original":-3092769,"modificado":-3121196,"proyecciones":-2688267},{"t":6,"original":2317321,"modificado":1868768,"proyecciones":3915790},{"t":7,"original":7138492,"modificado":3081832,"proyecciones":5804145},{"t":8,"original":-162351,"modificado":437002,"proyecciones":1892693},{"t":9,"original":-3092769,"modificado":-3518053,"proyecciones":-3079514},{"t":10,"original":2317899,"modificado":1998055,"proyecciones":4180163},{"t":11,"original":7139071,"modificado":4702696,"proyecciones":7401986},{"t":12,"original":-147936,"modificado":1847747,"proyecciones":3295497},{"t":13,"original":-3170552,"modificado":-3715639,"proyecciones":-3322354},{"t":14,"original":2389226,"modificado":2396047,"proyecciones":4488118},{"t":15,"original":7355032,"modificado":4746756,"proyecciones":7115830},{"t":16,"original":167530,"modificado":2347778,"proyecciones":3611893},{"t":17,"original":-3170552,"modificado":-3515185,"proyecciones":-3774111},{"t":18,"original":2390976,"modificado":-662706,"proyecciones":953292},{"t":19,"original":6856782,"modificado":3340908,"proyecciones":5270164},{"t":20,"original":368130,"modificado":557531,"proyecciones":-318081},{"t":21,"original":-3170552,"modificado":-3413798,"proyecciones":-3129111},{"t":22,"original":2390976,"modificado":135010,"proyecciones":1692867},{"t":23,"original":6856782,"modificado":10088418,"proyecciones":12142103},{"t":24,"original":368130,"modificado":6347751,"proyecciones":151973},{"t":25,"original":-3250668,"modificado":-1772962,"proyecciones":-5543931},{"t":26,"original":2462651,"modificado":686266,"proyecciones":-2780013},{"t":27,"original":7077432,"modificado":-3709588,"proyecciones":-11088006},{"t":28,"original":380603,"modificado":-2929529,"proyecciones":-249959},{"t":29,"original":-3250668,"modificado":-4461968,"proyecciones":-4142345},{"t":30,"original":2239051,"modificado":192226,"proyecciones":1632508},{"t":31,"original":7083732,"modificado":3962759,"proyecciones":5786109},{"t":32,"original":361729,"modificado":3344236,"proyecciones":7009893},{"t":33,"original":-3250668,"modificado":-1398702,"proyecciones":-1757031},{"t":34,"original":2475251,"modificado":4882809,"proyecciones":5156038},{"t":35,"original":7090032,"modificado":5678130,"proyecciones":6708874},{"t":36,"original":660903,"modificado":6351738,"proyecciones":3045388},{"t":37,"original":-3333189,"modificado":-1488616,"proyecciones":-2383025},{"t":38,"original":2319768,"modificado":8613646,"proyecciones":8200394},{"t":39,"original":7817892,"modificado":11455534,"proyecciones":10825229},{"t":40,"original":361518,"modificado":7621985,"proyecciones":6710311},{"t":41,"original":-3333189,"modificado":-1588120,"proyecciones":-2768271},{"t":42,"original":2537196,"modificado":5908597,"proyecciones":5763681},{"t":43,"original":7805420,"modificado":15190180,"proyecciones":15712479},{"t":44,"original":396330,"modificado":4234636,"proyecciones":6842303},{"t":45,"original":-3333189,"modificado":-5169341,"proyecciones":-5774043},{"t":46,"original":2538442,"modificado":3095972,"proyecciones":5021368},{"t":47,"original":7806667,"modificado":10220089,"proyecciones":11445581}];
+
+// ── ESTADO ────────────────────────────────────────────
+const S={wacc:.06,oper:.11,admin:.02,com:.03,pers:1.0,
+         tfin:Math.pow(1.12,.25)-1,trein:Math.pow(1.15,.25)-1};
+const IIGG=.35, FC_BASE=1.5406748878870404;
+
+// ── HELPERS ───────────────────────────────────────────
+function f$(v){
+  if(v==null||isNaN(v))return'—';
+  const a=Math.abs(v),s=v<0?'-':'';
+  if(a>=1e9)return s+'$'+(a/1e9).toFixed(2)+'B';
+  if(a>=1e6)return s+'$'+(a/1e6).toFixed(1)+'M';
+  if(a>=1e3)return s+'$'+(a/1e3).toFixed(0)+'K';
+  return s+'$'+a.toFixed(0);
+}
+function fp(v,d=1){if(v==null||isNaN(v))return'—';return(v*100).toFixed(d)+'%';}
+
+// ── MODELO ────────────────────────────────────────────
+function buildModel(p){
+  let qb=0;
+  return FLUJOS.map((f,i)=>{
+    if(i===0)return{t:f.t,fecha:f.fecha,qlabel:f.qlabel,ingr:0,oper_c:0,admin_c:0,com_c:0,pers_c:0,amort_c:f.amort,egr:0,fai:0,gan:0,inv:f.inversiones,flujo:-Math.abs(f.inversiones)};
+    const ingr=f.ingr_c,op=ingr*p.oper,ad=ingr*p.admin,co=ingr*p.com,pe=f.gs_pers*p.pers,am=f.amort;
+    const egr=op+ad+co+pe+am,fai=ingr-egr;
+    const mi=Math.max(0,fai-qb),gan=mi*IIGG;
+    if(fai>=0)qb=Math.max(0,qb-fai);else qb+=Math.abs(fai);
+    return{t:f.t,fecha:f.fecha,qlabel:f.qlabel,ingr,oper_c:op,admin_c:ad,com_c:co,pers_c:pe,amort_c:am,egr,fai,gan,inv:f.inversiones,flujo:fai-gan-f.inversiones};
+  });
+}
+function calcVAN(fl,wacc){const wt=Math.pow(1+wacc,.25)-1;return fl.reduce((a,f,i)=>a+f.flujo/Math.pow(1+wt,i),0);}
+function calcTIRM_anual(fl,tfin,trein){
+  const n=fl.length-1;let pvN=0,fvP=0;
+  fl.forEach((f,i)=>{if(f.flujo<0)pvN+=f.flujo/Math.pow(1+tfin,i);else if(f.flujo>0)fvP+=f.flujo*Math.pow(1+trein,n-i);});
+  if(!pvN||!fvP)return NaN;
+  return Math.pow(fvP/Math.abs(pvN),1/n)-1;
+}
+function calcTIR(fl){
+  const cf=fl.map(f=>f.flujo);
+  const npv=r=>cf.reduce((s,c,i)=>s+c/Math.pow(1+r,i),0);
+  let lo=-0.99,hi=5;
+  for(let i=0;i<300;i++){const m=(lo+hi)/2;if(Math.abs(npv(m))<0.01)return Math.pow(1+m,4)-1;npv(lo)*npv(m)<0?hi=m:lo=m;}
+  return Math.pow(1+(lo+hi)/2,4)-1;
+}
+function calcPB(fl,wacc){
+  const wt=Math.pow(1+wacc,.25)-1;let ac=0;
+  for(let i=0;i<fl.length;i++){const pv=fl[i].flujo/Math.pow(1+wt,i);ac+=pv;if(ac>=0&&i>0){const prev=ac-pv;return(i-1+(-prev/pv))/4;}}
+  return NaN;
+}
+function calcROI(fl){const inv=Math.abs(fl[0].flujo);return inv>0?fl.slice(1).reduce((s,f)=>s+f.flujo,0)/inv:NaN;}
+function aggAnnual(fl){
+  const y={};
+  fl.forEach(f=>{const k=f.fecha?f.fecha.substring(0,4):'2014';if(!y[k])y[k]={yr:k,ingr:0,egr:0,gan:0,inv:0,flujo:0};y[k].ingr+=f.ingr||0;y[k].egr+=f.egr||0;y[k].gan+=f.gan||0;y[k].inv+=f.inv||0;y[k].flujo+=f.flujo;});
+  return Object.values(y).sort((a,b)=>a.yr<b.yr?-1:1);
+}
+
+// ── CHARTS ────────────────────────────────────────────
+const CH={};
+function mk(id,cfg){
+  if(CH[id]){try{CH[id].destroy();}catch(e){}}
+  const el=document.getElementById(id);if(!el)return;
+  CH[id]=new Chart(el,cfg);
+}
+const TT={backgroundColor:'#091a30',titleColor:'#fff',bodyColor:'#bccde2',borderColor:'#185da8',borderWidth:1,padding:8,cornerRadius:4,titleFont:{family:'IBM Plex Sans',size:11,weight:'600'},bodyFont:{family:'IBM Plex Mono',size:11}};
+const AX={x:{grid:{color:'rgba(207,216,230,.5)'},ticks:{color:'#7a8aa0',font:{family:'IBM Plex Mono',size:9},maxTicksLimit:10}},y:{grid:{color:'rgba(207,216,230,.5)'},ticks:{color:'#7a8aa0',font:{family:'IBM Plex Mono',size:9}}}};
+const RA={responsive:true,maintainAspectRatio:false,animation:{duration:250}};
+
+function rFlujos(fl){
+  const lbl=fl.slice(1).map(f=>f.fecha?f.fecha.substring(2):'');
+  const d=fl.slice(1).map(f=>f.flujo/1e6);
+  let ac=fl[0].flujo/1e6;
+  const acum=fl.slice(1).map(f=>{ac+=f.flujo/1e6;return ac;});
+  mk('ch-flujos',{type:'bar',data:{labels:lbl,datasets:[
+    {type:'bar',data:d,backgroundColor:d.map(v=>v>=0?'rgba(26,107,63,.7)':'rgba(165,48,48,.65)'),borderWidth:0,yAxisID:'y',order:2},
+    {type:'line',data:acum,borderColor:'#185da8',backgroundColor:'rgba(24,93,168,.08)',borderWidth:2,fill:true,tension:.25,pointRadius:0,yAxisID:'y2',order:1}
+  ]},options:{...RA,plugins:{legend:{display:false},tooltip:TT},
+    scales:{x:{...AX.x,ticks:{...AX.x.ticks,maxTicksLimit:12}},y:{...AX.y,position:'left'},
+      y2:{type:'linear',position:'right',grid:{drawOnChartArea:false},ticks:{color:'#185da8',font:{family:'IBM Plex Mono',size:9}}}}}});
+}
+function rProd(){
+  mk('ch-prod',{type:'doughnut',data:{labels:['Minitrekking','Big Ice','Big+MTK','Safari'],datasets:[{data:[67,12,7,14],backgroundColor:['#185da8','#3a85b5','#0f7a8a','#7ab8f5'],borderColor:'#fff',borderWidth:2}]},
+    options:{...RA,cutout:'62%',plugins:{legend:{display:true,position:'right',labels:{color:'#34486a',font:{family:'IBM Plex Sans',size:11},boxWidth:11,padding:9}},tooltip:{...TT,callbacks:{label:item=>item.label+': '+item.parsed+'%'}}},scales:{}}});
+}
+function rEstac(){
+  const b={V:[],O:[],I:[],P:[]};
+  FLUJOS.forEach(f=>{if(!f.fecha||f.t===0)return;const m=parseInt(f.fecha.split('-')[1]);if(m===1)b.V.push(f.ingr_c);else if(m===4)b.O.push(f.ingr_c);else if(m===7)b.I.push(f.ingr_c);else if(m===10)b.P.push(f.ingr_c);});
+  const data=Object.values(b).map(arr=>arr.length?arr.reduce((s,v)=>s+v,0)/arr.length/1e6:0);
+  mk('ch-estac',{type:'bar',data:{labels:['V (verano)','O (otoño)','I (invierno)','P (primavera)'],datasets:[{data,backgroundColor:['#1a6b3f','#9c6a10','#3a85b5','#185da8'],borderRadius:3,borderWidth:0}]},
+    options:{...RA,plugins:{legend:{display:false},tooltip:TT},scales:AX}});
+}
+function rPyL(fl){
+  const an=aggAnnual(fl);
+  mk('ch-pyl',{type:'bar',data:{labels:an.map(a=>a.yr),datasets:[
+    {label:'Ingresos',data:an.map(a=>a.ingr/1e6),backgroundColor:'rgba(26,107,63,.78)',borderRadius:2,stack:'s'},
+    {label:'Egresos',data:an.map(a=>-a.egr/1e6),backgroundColor:'rgba(165,48,48,.7)',borderRadius:2,stack:'s'},
+    {label:'Imp.Gan.',data:an.map(a=>-a.gan/1e6),backgroundColor:'rgba(156,106,16,.7)',borderRadius:2,stack:'s'},
+    {label:'Inversiones',data:an.map(a=>-a.inv/1e6),backgroundColor:'rgba(15,122,138,.7)',borderRadius:2,stack:'s'},
+    {type:'line',label:'Flujo neto',data:an.map(a=>a.flujo/1e6),borderColor:'#185da8',borderWidth:2.5,tension:.2,pointRadius:4,pointBackgroundColor:'#185da8'}
+  ]},options:{...RA,plugins:{legend:{display:true,position:'top',align:'end',labels:{color:'#34486a',font:{family:'IBM Plex Sans',size:9},boxWidth:9,padding:5}},tooltip:TT},
+    scales:{x:{...AX.x,stacked:true},y:{...AX.y,stacked:true}}}});
+}
+function rIE(fl){
+  const an=aggAnnual(fl);
+  mk('ch-ie',{type:'line',data:{labels:an.map(a=>a.yr),datasets:[
+    {label:'Ingresos',data:an.map(a=>a.ingr/1e6),borderColor:'#1a6b3f',backgroundColor:'rgba(26,107,63,.12)',borderWidth:2.2,fill:true,tension:.28,pointRadius:3},
+    {label:'Egresos',data:an.map(a=>a.egr/1e6),borderColor:'#a53030',backgroundColor:'rgba(165,48,48,.08)',borderWidth:2.2,fill:true,tension:.28,pointRadius:3}
+  ]},options:{...RA,plugins:{legend:{display:true,position:'top',align:'end',labels:{color:'#34486a',font:{family:'IBM Plex Sans',size:9},boxWidth:9,padding:5}},tooltip:TT},scales:AX}});
+}
+function rPV(fl){
+  const wt=Math.pow(1+S.wacc,.25)-1;
+  const lbl=fl.slice(1).map(f=>f.fecha?f.fecha.substring(2):'');
+  const d=fl.slice(1).map((f,i)=>f.flujo/Math.pow(1+wt,i+1)/1e6);
+  mk('ch-pv',{type:'bar',data:{labels:lbl,datasets:[{data:d,backgroundColor:d.map(v=>v>=0?'rgba(15,122,138,.65)':'rgba(165,48,48,.6)'),borderWidth:0,borderRadius:1}]},
+    options:{...RA,plugins:{legend:{display:false},tooltip:TT},scales:{x:{...AX.x,ticks:{...AX.x.ticks,maxTicksLimit:12}},y:AX.y}}});
+}
+function rVANAcum(fl){
+  const wt=Math.pow(1+S.wacc,.25)-1;
+  const lbl=fl.map(f=>f.t===0?'t0':(f.fecha?f.fecha.substring(2):''));
+  let ac=0;const d=fl.map((f,i)=>{ac+=f.flujo/Math.pow(1+wt,i);return ac/1e6;});
+  mk('ch-vanacum',{type:'line',data:{labels:lbl,datasets:[{data:d,borderColor:'#185da8',backgroundColor:'rgba(24,93,168,.1)',borderWidth:2.5,fill:true,tension:.18,pointRadius:0,pointHoverRadius:4}]},
+    options:{...RA,plugins:{legend:{display:false},tooltip:TT},scales:{x:{...AX.x,ticks:{...AX.x.ticks,maxTicksLimit:12}},y:AX.y}}});
+}
+function rComp(){
+  const lbl=ESCENARIOS.map(e=>'t'+e.t);
+  mk('ch-comp',{type:'line',data:{labels:lbl,datasets:[
+    {label:'Original',data:ESCENARIOS.map(e=>e.original/1e6),borderColor:'#9c6a10',borderWidth:1.5,fill:false,tension:.2,pointRadius:0},
+    {label:'Modificado',data:ESCENARIOS.map(e=>e.modificado/1e6),borderColor:'#a53030',borderWidth:1.5,fill:false,tension:.2,pointRadius:0,borderDash:[3,3]},
+    {label:'Proyecciones',data:ESCENARIOS.map(e=>e.proyecciones/1e6),borderColor:'#185da8',backgroundColor:'rgba(24,93,168,.1)',borderWidth:2.2,fill:true,tension:.2,pointRadius:0}
+  ]},options:{...RA,plugins:{legend:{display:true,position:'top',align:'end',labels:{color:'#34486a',font:{family:'IBM Plex Sans',size:9},boxWidth:9,padding:5}},tooltip:TT},
+    scales:{x:{...AX.x,ticks:{...AX.x.ticks,maxTicksLimit:12}},y:AX.y}}});
+}
+
+// ── MATRICES ──────────────────────────────────────────
+function rMatFC(){
+  const fcs=[1.2,1.4,1.541,1.7,1.9,2.1],waccs=[0.04,0.06,0.08,0.10,0.12,0.15];
+  let h='<thead><tr><th>FC \\ WACC</th>';
+  waccs.forEach(w=>h+=`<th>${(w*100).toFixed(0)}%</th>`);
+  h+='</tr></thead><tbody>';
+  fcs.forEach(fc=>{
+    h+=`<tr><td>${fc.toFixed(2)}</td>`;
+    waccs.forEach(w=>{
+      const scale=FC_BASE/fc;
+      const fl2=FLUJOS.map((f,i)=>{
+        if(i===0)return{flujo:-Math.abs(f.inversiones)};
+        const ni=f.ingr_c*scale,ne=ni*(S.oper+S.admin+S.com)+f.gs_pers*S.pers+f.amort;
+        const nfai=ni-ne,ng=Math.max(0,nfai)*IIGG;
+        return{flujo:nfai-ng-f.inversiones};
+      });
+      const v=calcVAN(fl2,w)/1e6;
+      const cls=v>=80?'bm-g':v>=30?'bm-g2':v>=0?'bm-a':v>=-30?'bm-r':'bm-r2';
+      const cur=(Math.abs(fc-FC_BASE)<0.05&&Math.abs(w-S.wacc)<0.005)?' bm-cur':'';
+      h+=`<td class="${cls}${cur}">$${v.toFixed(0)}M</td>`;
+    });
+    h+='</tr>';
+  });
+  document.getElementById('mat-fc-wacc').innerHTML=h+'</tbody>';
+}
+function rMatTIRM(fl){
+  const tfins=[0.06,0.08,0.10,0.12,0.15,0.18],treins=[0.08,0.10,0.12,0.15,0.18,0.20];
+  let h='<thead><tr><th>Tfin \\ Trein</th>';
+  treins.forEach(r=>h+=`<th>${(r*100).toFixed(0)}%</th>`);
+  h+='</tr></thead><tbody>';
+  tfins.forEach(tf=>{
+    h+=`<tr><td>${(tf*100).toFixed(0)}%</td>`;
+    const tf_t=Math.pow(1+tf,.25)-1;
+    treins.forEach(tr=>{
+      const tr_t=Math.pow(1+tr,.25)-1;
+      const ta=calcTIRM_anual(fl,tf_t,tr_t)*100;
+      const cls=ta>=25?'bm-g':ta>=18?'bm-g2':ta>=10?'bm-a':ta>=0?'bm-r':'bm-r2';
+      const tfin_a=Math.pow(1+S.tfin,4)-1,trein_a=Math.pow(1+S.trein,4)-1;
+      const cur=(Math.abs(tf-tfin_a)<0.01&&Math.abs(tr-trein_a)<0.01)?' bm-cur':'';
+      h+=`<td class="${cls}${cur}">${isFinite(ta)?ta.toFixed(1)+'%':'—'}</td>`;
+    });
+    h+='</tr>';
+  });
+  document.getElementById('mat-tirm').innerHTML=h+'</tbody>';
+}
+function rEscenarios(fl){
+  const pP={...S,oper:S.oper*1.3},pO={...S,oper:S.oper*0.85};
+  const calc=(m,w)=>({van:calcVAN(m,w)/1e6,tirm:calcTIRM_anual(m,S.tfin,S.trein)*100,pb:calcPB(m,w),roi:calcROI(m)*100});
+  const eP=calc(buildModel(pP),S.wacc),eB=calc(fl,S.wacc),eO=calc(buildModel(pO),S.wacc);
+  const rows=[
+    {l:'VAN',v:[eP.van,eB.van,eO.van],f:v=>'$'+v.toFixed(1)+'M'},
+    {l:'TIRM anual',v:[eP.tirm,eB.tirm,eO.tirm],f:v=>isFinite(v)?v.toFixed(2)+'%':'—'},
+    {l:'Payback',v:[eP.pb,eB.pb,eO.pb],f:v=>isNaN(v)?'>12a':v.toFixed(2)+'a'},
+    {l:'ROI total',v:[eP.roi,eB.roi,eO.roi],f:v=>v.toFixed(0)+'%'}
+  ];
+  document.getElementById('esc-tbl').innerHTML=rows.map(r=>
+    `<tr><td style="text-align:left">${r.l}</td>${r.v.map((v,i)=>`<td class="${i===0?'vn':i===2?'vp':''}">${r.f(v)}</td>`).join('')}</tr>`
+  ).join('');
+}
+function rSens(fl){
+  const fcs=[1.0,1.25,1.5,1.75,2.0,2.25];
+  let h='';
+  fcs.forEach(fc=>{
+    const scale=FC_BASE/fc;
+    const fl2=FLUJOS.map((f,i)=>{
+      if(i===0)return{flujo:-Math.abs(f.inversiones)};
+      const ni=f.ingr_c*scale,ne=ni*(S.oper+S.admin+S.com)+f.gs_pers*S.pers+f.amort;
+      const nfai=ni-ne,ng=Math.max(0,nfai)*IIGG;
+      return{flujo:nfai-ng-f.inversiones};
+    });
+    const v=calcVAN(fl2,S.wacc)/1e6;
+    const w=Math.max(2,Math.min(100,50+v/2));
+    const col=v>=50?'var(--grn)':v>=0?'var(--ac)':v>=-30?'var(--amb)':'var(--red)';
+    h+=`<div class="sr"><span class="slbl">FC=${fc.toFixed(2)}</span><div class="sbw"><div class="sbar" style="width:${w}%;background:${col}"></div></div><span class="sv">$${v.toFixed(0)}M</span></div>`;
+  });
+  document.getElementById('sens-fc').innerHTML=h;
+
+  let h2='';
+  [0.06,0.08,0.10,0.12,0.15,0.18].forEach(tf=>{
+    const t=calcTIRM_anual(fl,Math.pow(1+tf,.25)-1,S.trein)*100;
+    const w=Math.max(2,Math.min(100,t*2.5));
+    const col=t>=25?'var(--grn)':t>=15?'var(--ac)':t>=8?'var(--amb)':'var(--red)';
+    h2+=`<div class="sr"><span class="slbl">Tfin ${(tf*100).toFixed(0)}%</span><div class="sbw"><div class="sbar" style="width:${w}%;background:${col}"></div></div><span class="sv">${isFinite(t)?t.toFixed(1)+'%':'—'}</span></div>`;
+  });
+  [0.08,0.10,0.12,0.15,0.18,0.20].forEach(tr=>{
+    const t=calcTIRM_anual(fl,S.tfin,Math.pow(1+tr,.25)-1)*100;
+    const w=Math.max(2,Math.min(100,t*2.5));
+    const col=t>=25?'var(--grn)':t>=15?'var(--ac)':t>=8?'var(--amb)':'var(--red)';
+    h2+=`<div class="sr"><span class="slbl">Trein ${(tr*100).toFixed(0)}%</span><div class="sbw"><div class="sbar" style="width:${w}%;background:${col}"></div></div><span class="sv">${isFinite(t)?t.toFixed(1)+'%':'—'}</span></div>`;
+  });
+  document.getElementById('sens-tirm').innerHTML=h2;
+}
+function rTabla(fl){
+  const wt=Math.pow(1+S.wacc,.25)-1;
+  const pvs=fl.map((f,i)=>f.flujo/Math.pow(1+wt,i));
+  let h='<thead><tr><th>Concepto</th>';
+  fl.forEach(f=>{h+=`<th>${f.t===0?'t0':'t'+f.t}${f.qlabel?`<br><span style="font-size:7px;color:var(--tx3)">${f.qlabel}</span>`:''}</th>`;});
+  h+='</tr></thead><tbody>';
+  const secs=[
+    {sec:'Ingresos'},{l:'Ingresos',k:'ingr',tot:true,col:true},
+    {sec:'Egresos'},{l:'Operativos',k:'oper_c',neg:true},{l:'Administrativos',k:'admin_c',neg:true},
+    {l:'Comercial',k:'com_c',neg:true},{l:'Personal',k:'pers_c',neg:true},{l:'Amortiz.',k:'amort_c',neg:true},
+    {l:'Total egresos',k:'egr',tot:true,neg:true},
+    {sec:'Resultado'},{l:'FAI',k:'fai',tot:true,col:true},{l:'Imp.Ganancias',k:'gan',neg:true},{l:'Inversiones',k:'inv',neg:true},
+    {sec:'Flujo'},{l:'Flujo neto',k:'flujo',tot:true,col:true},{l:'Flujo desct. (PV)',isPV:true,col:true},{l:'VAN acumulado',isVAC:true,col:true}
+  ];
+  secs.forEach(s=>{
+    if(s.sec){h+=`<tr class="shdr"><td colspan="${fl.length+1}">${s.sec}</td></tr>`;return;}
+    h+=`<tr${s.tot?' class="rtot"':s.col?'':' class="rda"'}><td>${s.l}</td>`;
+    fl.forEach((f,i)=>{
+      const v=s.isPV?pvs[i]:s.isVAC?pvs.slice(0,i+1).reduce((a,b)=>a+b,0):(f[s.k]||0);
+      const d=v===0?'—':(s.neg&&v>0?'('+f$(v)+')':f$(v));
+      const cls=s.col?(v>0?'vp':v<0?'vn':''):'';
+      h+=`<td class="${cls}">${d}</td>`;
+    });
+    h+='</tr>';
+  });
+  document.getElementById('tbl-detail').innerHTML=h+'</tbody>';
+}
+
+// ── UPDATE PRINCIPAL ──────────────────────────────────
+function updateAll(force=false){
+  const fl=buildModel(S);
+  const van=calcVAN(fl,S.wacc);
+  const tirm=calcTIRM_anual(fl,S.tfin,S.trein);
+  const pb=calcPB(fl,S.wacc);
+  const roi=calcROI(fl);
+  const ti=fl.reduce((s,f)=>s+(f.ingr||0),0);
+  const tf=fl.reduce((s,f)=>s+f.flujo,0);
+
+  // METRIC BAR
+  const mv=document.getElementById('m-van');mv.textContent=f$(van);mv.style.color=van>=0?'var(--grn)':'var(--red)';
+  const mt=document.getElementById('m-tirm');mt.textContent=isFinite(tirm)?fp(tirm,1):'—';mt.style.color=isFinite(tirm)&&tirm>S.wacc?'var(--grn)':'var(--red)';
+  const mp=document.getElementById('m-pb');mp.textContent=isNaN(pb)?'>12a':pb.toFixed(1)+'a';mp.style.color=!isNaN(pb)&&pb<=8?'var(--grn)':'var(--amb)';
+  const mr=document.getElementById('m-roi');mr.textContent=isFinite(roi)?fp(roi,0):'—';mr.style.color=isFinite(roi)&&roi>1?'var(--grn)':'var(--amb)';
+
+  // TOP BADGE
+  const bv=document.getElementById('b-van');bv.textContent='VAN '+f$(van);
+  bv.style.background=van>=0?'rgba(26,107,63,.25)':'rgba(165,48,48,.25)';
+  bv.style.color=van>=0?'#4ade80':'#fca5a5';
+
+  // KPIs
+  const kv=document.getElementById('k-van');if(kv){kv.textContent=f$(van);kv.style.color=van>=0?'var(--ac)':'var(--red)';}
+  const kt=document.getElementById('k-tir');if(kt){kt.textContent=isFinite(tirm)?fp(tirm,2):'—';kt.style.color=isFinite(tirm)&&tirm>S.wacc?'var(--grn)':'var(--red)';}
+  const kp=document.getElementById('k-pb');if(kp)kp.textContent=isNaN(pb)?'> horizonte':pb.toFixed(2)+' años';
+  const kr=document.getElementById('k-roi');if(kr)kr.textContent=isFinite(roi)?fp(roi,0):'—';
+
+  // TIRM CARD
+  const bt=document.getElementById('big-tir');if(bt){bt.textContent=isFinite(tirm)?fp(tirm,2):'—';bt.style.color=isFinite(tirm)&&tirm>S.wacc?'var(--grn)':'var(--red)';}
+  const bp=Math.max(0,Math.min(100,(tirm*100+10)/50*100));
+  const bn=document.getElementById('bar-tir');if(bn)bn.style.left=bp+'%';
+  const irw=document.getElementById('ir-wacc');if(irw)irw.textContent=fp(S.wacc,1);
+  const isp=document.getElementById('ir-spread');if(isp)isp.textContent=isFinite(tirm)?fp(tirm-S.wacc,1):'—';
+  const itf=document.getElementById('ir-tfin');if(itf)itf.textContent=fp(S.tfin,3);
+  const itr=document.getElementById('ir-trein');if(itr)itr.textContent=fp(S.trein,3);
+
+  // SEMAPHORE
+  ['sem-g','sem-a','sem-r'].forEach((id,i)=>{
+    const el=document.getElementById(id);if(el)el.className='sem-dot '+['off-grn','off-amb','off-red'][i];
+  });
+  let sId,head,body;
+  if(van>50e6&&tirm>.20){sId='sem-g';head='Proyecto financieramente sólido';body='VAN positivo significativo · TIRM superior al WACC con holgura · cumple criterios de inversión en 12 años';}
+  else if(van>0&&tirm>S.wacc){sId='sem-a';head='Proyecto viable con margen ajustado';body='VAN positivo y TIRM > WACC · sensibilidad relevante a variaciones de costos o tasas';}
+  else{sId='sem-r';head='Proyecto en zona crítica';body='VAN negativo o TIRM < WACC · revisar supuestos de costos y tasas TIRM';}
+  const sEl=document.getElementById(sId);if(sEl)sEl.className='sem-dot on-'+(sId==='sem-g'?'grn':sId==='sem-a'?'amb':'red');
+  const sh=document.getElementById('sem-head');if(sh)sh.textContent=head;
+  const sb=document.getElementById('sem-body');if(sb)sb.textContent=body;
+
+  // CHARTS (only render visible)
+  const active=document.querySelector('.screen.active');
+  const aid=active?active.id:'';
+  if(aid==='s-resumen'||force){rFlujos(fl);rProd();rEstac();}
+  if(aid==='s-proy'||force){rPyL(fl);rIE(fl);rPV(fl);rVANAcum(fl);rComp();}
+  if(aid==='s-sens'||force){rMatFC();rMatTIRM(fl);rEscenarios(fl);rSens(fl);}
+  if(aid==='s-tabla'||force)rTabla(fl);
+}
+
+// ── SLIDERS ───────────────────────────────────────────
+document.getElementById('s-wacc').addEventListener('input',e=>{
+  S.wacc=parseFloat(e.target.value)/100;
+  document.getElementById('v-wacc').textContent=fp(S.wacc,1);
+  document.getElementById('v-wacc-trim').textContent=((Math.pow(1+S.wacc,.25)-1)*100).toFixed(3)+'%';
+  document.getElementById('v-wacc-mes').textContent=((Math.pow(1+S.wacc,1/12)-1)*100).toFixed(3)+'%';
+  updateAll();
+});
+document.getElementById('s-tfin').addEventListener('input',e=>{
+  const a=parseFloat(e.target.value)/100;S.tfin=Math.pow(1+a,.25)-1;
+  document.getElementById('v-tfin').textContent=(a*100).toFixed(1)+'%';
+  document.getElementById('v-tfin-trim').textContent=(S.tfin*100).toFixed(3)+'%';
+  updateAll();
+});
+document.getElementById('s-trein').addEventListener('input',e=>{
+  const a=parseFloat(e.target.value)/100;S.trein=Math.pow(1+a,.25)-1;
+  document.getElementById('v-trein').textContent=(a*100).toFixed(1)+'%';
+  document.getElementById('v-trein-trim').textContent=(S.trein*100).toFixed(3)+'%';
+  updateAll();
+});
+document.getElementById('s-oper').addEventListener('input',e=>{S.oper=e.target.value/100;document.getElementById('v-oper').textContent=(S.oper*100).toFixed(1)+'%';updateAll();});
+document.getElementById('s-admin').addEventListener('input',e=>{S.admin=e.target.value/100;document.getElementById('v-admin').textContent=(S.admin*100).toFixed(1)+'%';updateAll();});
+document.getElementById('s-com').addEventListener('input',e=>{S.com=e.target.value/100;document.getElementById('v-com').textContent=(S.com*100).toFixed(1)+'%';updateAll();});
+document.getElementById('s-pers').addEventListener('input',e=>{S.pers=e.target.value/100;document.getElementById('v-pers').textContent=e.target.value+'%';updateAll();});
+
+// ── RESET ─────────────────────────────────────────────
+function resetDefaults(){
+  S.wacc=.06;S.oper=.11;S.admin=.02;S.com=.03;S.pers=1.0;
+  S.tfin=Math.pow(1.12,.25)-1;S.trein=Math.pow(1.15,.25)-1;
+  [['s-wacc',6,'v-wacc','6.0%'],['s-tfin',12,'v-tfin','12.0%'],['s-trein',15,'v-trein','15.0%'],
+   ['s-oper',11,'v-oper','11.0%'],['s-admin',2,'v-admin','2.0%'],['s-com',3,'v-com','3.0%'],['s-pers',100,'v-pers','100%']]
+  .forEach(([id,val,lbl,txt])=>{document.getElementById(id).value=val;document.getElementById(lbl).textContent=txt;});
+  document.getElementById('v-wacc-trim').textContent=((Math.pow(1.06,.25)-1)*100).toFixed(3)+'%';
+  document.getElementById('v-wacc-mes').textContent=((Math.pow(1.06,1/12)-1)*100).toFixed(3)+'%';
+  document.getElementById('v-tfin-trim').textContent=((Math.pow(1.12,.25)-1)*100).toFixed(3)+'%';
+  document.getElementById('v-trein-trim').textContent=((Math.pow(1.15,.25)-1)*100).toFixed(3)+'%';
+  updateAll(true);
+}
+
+window.addEventListener('load',()=>updateAll(true));
+
+// ── SERVICE WORKER ────────────────────────────────────
+if ('serviceWorker' in navigator) {
+  window.addEventListener('load', () => {
+    navigator.serviceWorker.register('/sw.js')
+      .then(reg => console.log('SW registrado:', reg.scope))
+      .catch(err => console.warn('SW error:', err));
+  });
+}
+</script>
+</body>
+</html>
